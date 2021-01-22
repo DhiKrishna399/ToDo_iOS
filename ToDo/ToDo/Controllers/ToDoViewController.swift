@@ -6,13 +6,17 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoViewController: UITableViewController{
     
     var items: [Item] = []
     
-    //File Path for storing data
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    //    //File Path for storing data into a PList
+    //    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+    //Access to CoreData
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -20,19 +24,9 @@ class ToDoViewController: UITableViewController{
         
         
         
-        print(dataFilePath)
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        let newToDoItem = Item()
-        newToDoItem.title = "First todo object way bru"
-        items.append(newToDoItem)
-        
-        let newToDoItem2 = Item()
-        newToDoItem2.title = "second todo object way bru"
-        items.append(newToDoItem2)
-        
-        let newToDoItem3 = Item()
-        newToDoItem3.title = "third todo object way bru"
-        items.append(newToDoItem3)
+        //        loadItems()
         
         
         //Search for the file based off the key
@@ -92,8 +86,15 @@ class ToDoViewController: UITableViewController{
             //Create a temp item and append it to our array of items
             if !textFieldExt.text!.isEmpty {
                 print(textFieldExt.text ?? "Empty, nothing entered")
-                let temp = Item()
+                
+                
+                
+                //This is created using an NSManagedObject from our core DataModel
+                //We must fill in title anditemDone fields bc we said they can't be optional values
+                let temp = Item(context: self.context)
                 temp.title = textFieldExt.text!
+                temp.itemDone = false
+                
                 self.items.append(temp)
                 
                 self.saveItems()
@@ -111,18 +112,30 @@ class ToDoViewController: UITableViewController{
         //Persistant store in the array so we don't lose data upon termination
         // self.defaults.set(self.items, forKey: "ToDoListArray")
         
-        let encoder = PropertyListEncoder()
-        
         do {
-            let data = try encoder.encode(items)
-            try data.write(to: dataFilePath!)
+            try context.save()
         }catch {
-            print("Error with array encoding: \(error)")
+            print("Error saving context: \(error)")
         }
         
         self.tableView.reloadData()
     }
     
+    //    func loadItems(){
+    //
+    //
+    //        if let data = try? Data(contentsOf: dataFilePath!){
+    //            let decoder = PropertyListDecoder()
+    //
+    //            do{
+    //                items = try decoder.decode([Item].self, from: data)
+    //            } catch {
+    //                print("Error in decoding \(error)")
+    //            }
+    //        }
+    //
+    //
+    //    }
     
 }
 
