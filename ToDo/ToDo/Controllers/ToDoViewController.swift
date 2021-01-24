@@ -8,14 +8,15 @@
 import UIKit
 import CoreData
 
-class ToDoViewController: UITableViewController{
+class ToDoViewController: UITableViewController {
     
     var items: [Item] = []
     
     //    //File Path for storing data into a PList
     //    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
     
-    //Access to CoreData
+    //Access to CoreData persistentContainer
+    //We must call context in order, to create, save, and fetch data from the container
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
@@ -24,9 +25,11 @@ class ToDoViewController: UITableViewController{
         
         
         
+        
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        //        loadItems()
+        
+        loadItems()
         
         
         //Search for the file based off the key
@@ -35,6 +38,9 @@ class ToDoViewController: UITableViewController{
         //        }
     }
     
+ 
+    
+// MARK: - Table View Setup
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return items.count
     }
@@ -59,13 +65,17 @@ class ToDoViewController: UITableViewController{
         //Toggle the itemDone variable in each item
         items[indexPath.row].itemDone = !items[indexPath.row].itemDone
         
+        //         Used to delete items from the table view and Container
+        //        context.delete(items[indexPath.row] as NSManagedObject)
+        //        items.remove(at: indexPath.row)
+        //
         self.saveItems()
         
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
     
-    
+//  MARK: - Data Manipulation
     @IBAction func addNewItem(_ sender: UIBarButtonItem) {
         
         var textFieldExt = UITextField()
@@ -108,6 +118,8 @@ class ToDoViewController: UITableViewController{
         self.present(alert, animated: true)
     }
     
+// MARK: - Save&Load Core Data
+    
     func saveItems(){
         //Persistant store in the array so we don't lose data upon termination
         // self.defaults.set(self.items, forKey: "ToDoListArray")
@@ -121,23 +133,77 @@ class ToDoViewController: UITableViewController{
         self.tableView.reloadData()
     }
     
-    //    func loadItems(){
-    //
-    //
-    //        if let data = try? Data(contentsOf: dataFilePath!){
-    //            let decoder = PropertyListDecoder()
-    //
-    //            do{
-    //                items = try decoder.decode([Item].self, from: data)
-    //            } catch {
-    //                print("Error in decoding \(error)")
-    //            }
-    //        }
-    //
-    //
-    //    }
     
+    //Using a defauly parameter to avoid declaring a FethRequest everytime
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()){
+        
+        do {
+            //set items array to be equal to values from the container
+            items = try context.fetch(request)
+        } catch {
+            print("Error with fetching from container \(error)")
+        }
+        
+        tableView.reloadData()
+        
+        //
+        //
+        //        if let data = try? Data(contentsOf: dataFilePath!){
+        //            let decoder = PropertyListDecoder()
+        //
+        //            do{
+        //                items = try decoder.decode([Item].self, from: data)
+        //            } catch {
+        //                print("Error in decoding \(error)")
+        //            }
+        //        }
+        //
+        //
+    }
+    
+   
+     
 }
+
+// MARK: - SearchBarDelegate
+extension ToDoViewController: UISearchBarDelegate{
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        //Retrieve the list from Container
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        //print(searchBar.text!)
+        
+        //A mix of SQL/C querying
+        //[cd] makes query insensitive to cases and diacretics
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request)
+        
+       
+
+    }
+    
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            //Using this puts it on the main thread and stops the cursor from blinking in the search bar
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            
+        }
+    }
+
+}
+
+
 
 
 
